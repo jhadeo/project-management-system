@@ -16,13 +16,13 @@ class ProjectResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'clientName' => $this->client_name,
-            'projectName' => $this->project_name,
+            'client_name' => $this->client_name,
+            'project_name' => $this->project_name,
             'description' => $this->description,
             'status' => $this->status,
             'priority' => $this->priority,
-            'startDate' => $this->start_date,
-            'dueDate' => $this->due_date
+            'start_date' => $this->start_date,
+            'due_date' => $this->due_date
         ];
     }
 }

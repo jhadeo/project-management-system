@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Pencil, Plus, Trash2 } from "lucide-react"
+import { LoaderCircle, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react"
 
+import api from "../api/api"
 import { Button } from "../components/ui/button"
 import {
 	Table,
@@ -11,43 +13,60 @@ import {
 	TableRow,
 } from "../components/ui/table"
 
-const projects = [
-	{
-		id: 1,
-		name: "Website redesign",
-		description: "Refresh the marketing site and improve conversion paths.",
-		status: "In progress",
-		priority: "High",
-		dueDate: "Oct 18, 2026",
-	},
-	{
-		id: 2,
-		name: "Mobile app launch",
-		description: "Prepare the first public release for iOS and Android.",
-		status: "Planning",
-		priority: "Medium",
-		dueDate: "Nov 04, 2026",
-	},
-	{
-		id: 3,
-		name: "Customer research",
-		description: "Interview active customers and synthesize product insights.",
-		status: "Completed",
-		priority: "Low",
-		dueDate: "Sep 30, 2026",
-	},
-	{
-		id: 4,
-		name: "Q4 campaign",
-		description: "Coordinate creative, media, and launch communications.",
-		status: "In progress",
-		priority: "High",
-		dueDate: "Dec 12, 2026",
-	},
-]
+const formatLabel = (value) => value?.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) || "—"
+
+const formatDate = (value) => {
+	if (!value) return "—"
+
+	const date = new Date(value)
+	return Number.isNaN(date.getTime())
+		? value
+		: new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date)
+}
 
 function Projects() {
 	const navigate = useNavigate()
+	const [projects, setProjects] = useState([])
+	const [isLoading, setIsLoading] = useState(true)
+	const [error, setError] = useState("")
+	const [deletingId, setDeletingId] = useState(null)
+
+	const loadProjects = async () => {
+		setIsLoading(true)
+		setError("")
+
+		try {
+			const response = await api.get("/projects")
+			setProjects(response.data.data ?? [])
+		} catch (requestError) {
+			setError(requestError.response?.data?.message || "Unable to load projects.")
+		} finally {
+			setIsLoading(false)
+		}
+	}
+
+	useEffect(() => {
+		api.get("/projects")
+			.then((response) => setProjects(response.data.data ?? []))
+			.catch((requestError) => setError(requestError.response?.data?.message || "Unable to load projects."))
+			.finally(() => setIsLoading(false))
+	}, [])
+
+	const deleteProject = async (project) => {
+		if (!window.confirm(`Delete ${project.project_name}?`)) return
+
+		setDeletingId(project.id)
+		setError("")
+
+		try {
+			await api.delete(`/projects/${project.id}/delete`)
+			setProjects((currentProjects) => currentProjects.filter(({ id }) => id !== project.id))
+		} catch (requestError) {
+			setError(requestError.response?.data?.message || "Unable to delete the project.")
+		} finally {
+			setDeletingId(null)
+		}
+	}
 
 	return (
 		<main className="min-h-screen bg-muted/30 px-4 py-8 sm:px-6 lg:px-10">
@@ -60,6 +79,16 @@ function Projects() {
 					</Button>
 				</div>
 
+				{error && (
+					<div role="alert" className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+						<span>{error}</span>
+						<Button variant="ghost" size="sm" onClick={loadProjects} disabled={isLoading}>
+							<RefreshCw data-icon="inline-start" />
+							Retry
+						</Button>
+					</div>
+				)}
+
 				<div className="overflow-hidden rounded-2xl border bg-background shadow-sm p-6">
 					<Table className="">
 						<TableHeader>
@@ -67,35 +96,50 @@ function Projects() {
 								<TableHead className="w-[30%]">Project</TableHead>
 								<TableHead>Status</TableHead>
 								<TableHead>Priority</TableHead>
+                                <TableHead>Start date</TableHead>
 								<TableHead>Due date</TableHead>
 								<TableHead className="text-right">Actions</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{projects.map((project) => (
+							{isLoading ? (
+								<TableRow>
+									<TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+										<LoaderCircle className="mx-auto mb-2 size-5 animate-spin" />
+										Loading projects...
+									</TableCell>
+								</TableRow>
+							) : projects.length === 0 ? (
+								<TableRow>
+									<TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+										No projects yet.
+									</TableCell>
+								</TableRow>
+							) : projects.map((project) => (
 								<TableRow key={project.id}>
 									<TableCell className="py-4">
-										<div className="font-medium">{project.name}</div>
+										<button className="font-medium hover:underline" onClick={() => navigate(`/projects/${project.id}`)}>{project.project_name}</button>
 										<div className="mt-1 max-w-sm truncate text-xs text-muted-foreground">
 											{project.description}
 										</div>
 									</TableCell>
 									<TableCell>
 										<span className="inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-											{project.status}
+											{formatLabel(project.status)}
 										</span>
 									</TableCell>
-									<TableCell className="text-muted-foreground">{project.priority}</TableCell>
-									<TableCell className="text-muted-foreground">{project.dueDate}</TableCell>
+									<TableCell className="text-muted-foreground">{formatLabel(project.priority)}</TableCell>
+                                    <TableCell className="text-muted-foreground">{formatDate(project.start_date)}</TableCell>
+									<TableCell className="text-muted-foreground">{formatDate(project.due_date)}</TableCell>
 									<TableCell>
 										<div className="flex justify-end gap-1">
-											<Button variant="ghost" size="sm" aria-label={`Edit ${project.name}`}>
+											<Button variant="ghost" size="sm" aria-label={`Edit ${project.project_name}`} onClick={() => navigate(`/projects/${project.id}/edit`)}>
 												<Pencil data-icon="inline-start" />
 												Edit
 											</Button>
-											<Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" aria-label={`Delete ${project.name}`}>
+											<Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" aria-label={`Delete ${project.project_name}`} onClick={() => deleteProject(project)} disabled={deletingId === project.id}>
 												<Trash2 data-icon="inline-start" />
-												Delete
+												{deletingId === project.id ? "Deleting..." : "Delete"}
 											</Button>
 										</div>
 									</TableCell>
