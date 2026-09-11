@@ -5,6 +5,16 @@ import { LoaderCircle, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react"
 import api from "../api/api"
 import { Button } from "../components/ui/button"
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "../components/ui/alert-dialog"
+import {
 	Table,
 	TableBody,
 	TableCell,
@@ -30,6 +40,7 @@ function Projects() {
 	const [isLoading, setIsLoading] = useState(true)
 	const [error, setError] = useState("")
 	const [deletingId, setDeletingId] = useState(null)
+	const [projectToDelete, setProjectToDelete] = useState(null)
 
 	const loadProjects = async () => {
 		setIsLoading(true)
@@ -53,8 +64,6 @@ function Projects() {
 	}, [])
 
 	const deleteProject = async (project) => {
-		if (!window.confirm(`Delete ${project.project_name}?`)) return
-
 		setDeletingId(project.id)
 		setError("")
 
@@ -66,6 +75,13 @@ function Projects() {
 		} finally {
 			setDeletingId(null)
 		}
+	}
+
+	const confirmDeleteProject = async () => {
+		if (!projectToDelete) return
+
+		await deleteProject(projectToDelete)
+		setProjectToDelete(null)
 	}
 
 	return (
@@ -137,9 +153,9 @@ function Projects() {
 												<Pencil data-icon="inline-start" />
 												Edit
 											</Button>
-											<Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" aria-label={`Delete ${project.project_name}`} onClick={() => deleteProject(project)} disabled={deletingId === project.id}>
+												<Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" aria-label={`Delete ${project.project_name}`} onClick={() => setProjectToDelete(project)} disabled={deletingId === project.id}>
 												<Trash2 data-icon="inline-start" />
-												{deletingId === project.id ? "Deleting..." : "Delete"}
+													Delete
 											</Button>
 										</div>
 									</TableCell>
@@ -148,6 +164,23 @@ function Projects() {
 						</TableBody>
 					</Table>
 				</div>
+
+				<AlertDialog open={projectToDelete !== null} onOpenChange={(open) => !open && setProjectToDelete(null)}>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>Delete project?</AlertDialogTitle>
+							<AlertDialogDescription>
+								This will permanently delete {projectToDelete?.project_name}. This action cannot be undone.
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel disabled={deletingId !== null}>Cancel</AlertDialogCancel>
+							<AlertDialogAction onClick={confirmDeleteProject} disabled={deletingId !== null} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+								{deletingId !== null ? "Deleting..." : "Delete project"}
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
 			</div>
 		</main>
 	)
