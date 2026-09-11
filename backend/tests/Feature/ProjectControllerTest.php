@@ -19,8 +19,8 @@ test('projects can be created, listed, viewed, updated, and deleted', function (
 
     $createResponse
         ->assertOk()
-        ->assertJsonPath('data.clientName', 'Acme Inc.')
-        ->assertJsonPath('data.projectName', 'Website redesign');
+        ->assertJsonPath('data.client_name', 'Acme Inc.')
+        ->assertJsonPath('data.project_name', 'Website redesign');
 
     $projectId = $createResponse->json('data.id');
 
@@ -41,7 +41,7 @@ test('projects can be created, listed, viewed, updated, and deleted', function (
         'project_name' => 'Updated website redesign',
     ])
         ->assertOk()
-        ->assertJsonPath('data.projectName', 'Updated website redesign');
+        ->assertJsonPath('data.project_name', 'Updated website redesign');
 
     $this->deleteJson("/api/projects/{$projectId}/delete")
         ->assertOk()
