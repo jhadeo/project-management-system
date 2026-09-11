@@ -49,3 +49,24 @@ test('projects can be created, listed, viewed, updated, and deleted', function (
 
     $this->assertSoftDeleted('projects', ['id' => $projectId]);
 });
+
+test('project creation returns meaningful validation errors for invalid fields', function () {
+    $response = $this->postJson('/api/projects', [
+        'description' => 'A project with invalid fields.',
+        'status' => 'invalid-status',
+        'priority' => 'invalid-priority',
+        'start_date' => '2026-09-11',
+        'due_date' => '2026-09-10',
+    ]);
+
+    $response
+        ->assertStatus(422)
+        ->assertJsonPath('message', 'The client name field is required. (and 4 more errors)')
+        ->assertJsonValidationErrors([
+            'client_name',
+            'project_name',
+            'status',
+            'priority',
+            'due_date',
+        ]);
+});

@@ -32,7 +32,7 @@ class StoreRequest extends FormRequest
             'status' => ['required', new Enum(Status::class)],
             'priority' => ['required', new Enum(Priority::class)],
             'start_date' => ['required', 'date'],
-            'due_date' => ['required', 'date']
+            'due_date' => ['required', 'date', 'after_or_equal:start_date']
         ];
     }
 }

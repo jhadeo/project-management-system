@@ -32,7 +32,7 @@ class UpdateRequest extends FormRequest
             'status' => ['sometimes', 'required', new Enum(Status::class)],
             'priority' => ['sometimes', 'required', new Enum(Priority::class)],
             'start_date' => ['sometimes', 'required', 'date'],
-            'due_date' => ['sometimes', 'required', 'date'],
+            'due_date' => ['sometimes', 'required', 'date', 'after_or_equal:start_date'],
         ];
     }
 }
